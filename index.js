@@ -23,8 +23,10 @@ async function run() {
   try {
     const homesCollection = client.db("luxuryNestDb").collection("homes");
     const usersCollection = client.db("luxuryNestDb").collection("users");
+    const bookingsCollection = client.db("luxuryNestDb").collection("bookings");
 
-    // Save user email & generate JWT(user er email )
+    // Save user email & generate JWT
+    // --- save user data to database and generate a token and send it to frontend & save local storage--
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
@@ -39,12 +41,79 @@ async function run() {
         options
       );
       console.log(result);
+
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: "1d",
       });
+      console.log(token);
+      res.send({ result, token });
     });
 
-    console.log("Database nest Connected...");
+    // Save a booking
+    app.post("/bookings", async (req, res) => {
+      const bookingData = req.body;
+      const result = await bookingsCollection.insertOne(bookingData);
+      console.log(result);
+      res.send(result);
+    });
+
+    // Get All Bookings
+    app.get("/bookings", async (req, res) => {
+      let query = {};
+      const email = req.query.email;
+      if (email) {
+        query = {
+          guestEmail: email,
+        };
+      }
+
+      const booking = await bookingsCollection.find(query).toArray();
+      console.log(booking);
+      res.send(booking);
+    });
+
+    // Get a single user by email
+    app.get("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+
+      const user = await usersCollection.findOne(query);
+      console.log(user.role);
+      res.send(user);
+    });
+
+    // Get all users
+    app.get("/users", async (req, res) => {
+      const users = await usersCollection.find().toArray();
+      console.log(users);
+      res.send(users);
+    });
+
+    // Get All Homes
+    app.get("/homes", async (req, res) => {
+      const query = {};
+      const cursor = homesCollection.find(query);
+      const homes = await cursor.toArray();
+      res.send(homes);
+    });
+
+    // Get Single Home
+    app.get("/home/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const home = await homesCollection.findOne(query);
+      res.send(home);
+    });
+
+    // Post A Home
+    app.post("/homes", async (req, res) => {
+      const home = req.body;
+      console.log(home);
+      const result = await homesCollection.insertOne(home);
+      res.send(result);
+    });
+
+    console.log("Database Connected...");
   } finally {
   }
 }
@@ -52,9 +121,9 @@ async function run() {
 run().catch((err) => console.error(err));
 
 app.get("/", (req, res) => {
-  res.send("Server is running The luxury nest...");
+  res.send("Server is running ... in session");
 });
 
 app.listen(port, () => {
-  console.log(`Server Pandora luxury nest is running...on ${port}`);
+  console.log(`Server is running...on Pandora moon ${port}`);
 });
